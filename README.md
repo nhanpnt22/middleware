@@ -65,4 +65,3 @@ handler
 ```
 
 Use `ValidateStandardOrder` to enforce order in tests/CI.
-# middleware
