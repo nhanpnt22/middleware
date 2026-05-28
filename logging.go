@@ -20,11 +20,22 @@ type StdLogSink struct {
 	logger *log.Logger
 }
 
+// NoopLogSink intentionally drops all log entries.
+type NoopLogSink struct{}
+
+func (NoopLogSink) Log(context.Context, map[string]interface{}) {
+	// Intentionally no-op: this sink suppresses all log output.
+}
+
 func NewStdLogSink(logger *log.Logger) *StdLogSink {
 	if logger == nil {
 		logger = log.Default()
 	}
 	return &StdLogSink{logger: logger}
+}
+
+func NewNoopLogSink() NoopLogSink {
+	return NoopLogSink{}
 }
 
 func (s *StdLogSink) Log(_ context.Context, entry map[string]interface{}) {

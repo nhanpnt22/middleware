@@ -100,6 +100,42 @@ For explicit wiring constructors, use strict constructors:
 - `HTTPValidationMiddlewareStrict`
 - `GRPCValidationInterceptorStrict`
 
+## Quick Start: Default vs Strict
+
+Default mode applies safe fallbacks:
+
+```go
+logging := middleware.HTTPLoggingMiddleware(middleware.LoggingConfig{})
+metrics := middleware.HTTPMetricsMiddleware(middleware.MetricsConfig{})
+```
+
+Strict mode fails fast when required dependencies are missing:
+
+```go
+logging, err := middleware.HTTPLoggingMiddlewareStrict(middleware.LoggingConfig{
+	ServiceName:       "orders-api",
+	Environment:       middleware.EnvironmentProduction,
+	Logger:            middleware.NewNoopLogSink(),
+	Now:               time.Now,
+	NormalizeEndpoint: func(s string) string { return s },
+})
+if err != nil {
+	panic(err)
+}
+
+metrics, err := middleware.HTTPMetricsMiddlewareStrict(middleware.MetricsConfig{
+	ServiceName: "orders-api",
+	Recorder:    middleware.NewNoopMetricsRecorder(),
+	Now:         time.Now,
+})
+if err != nil {
+	panic(err)
+}
+
+_ = logging
+_ = metrics
+```
+
 ## Foundation Primitives
 
 For reusable ID/hash/token generation across middleware and services, use `Foundation`.
@@ -117,6 +153,11 @@ Pluggable interfaces:
 - `BinaryTextCodec` (e.g. Base64URL, Base32, B57/F57 adapters)
 - `DigestProvider` (e.g. SHA-256, BLAKE3 adapters)
 - `FuncBinaryTextCodec` and `FuncDigestProvider` for function-based integration
+
+Built-in no-op adapters:
+
+- `NewNoopLogSink()`
+- `NewNoopMetricsRecorder()`
 
 Core operations:
 
@@ -145,3 +186,10 @@ See minimal examples:
 
 - Do not store secret values in configuration files.
 - Inject secret-bearing values through environment variables or a secret manager.
+
+## Release Checklist
+
+- Run `go test ./...`
+- Verify strict constructors for startup wiring return no errors in your service bootstrap
+- Confirm middleware order with `ValidateStandardOrder` in CI/tests
+- Tag releases with semantic versioning (for example `v0.1.1`)

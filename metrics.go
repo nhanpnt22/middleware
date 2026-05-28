@@ -24,6 +24,25 @@ type MetricsRecorder interface {
 	ObserveLatency(labels MetricLabels, milliseconds int64)
 }
 
+// NoopMetricsRecorder intentionally drops all metrics events.
+type NoopMetricsRecorder struct{}
+
+func (NoopMetricsRecorder) IncRequest(MetricLabels) {
+	// Intentionally no-op: this recorder suppresses request counters.
+}
+
+func (NoopMetricsRecorder) IncError(MetricLabels) {
+	// Intentionally no-op: this recorder suppresses error counters.
+}
+
+func (NoopMetricsRecorder) ObserveLatency(MetricLabels, int64) {
+	// Intentionally no-op: this recorder suppresses latency samples.
+}
+
+func NewNoopMetricsRecorder() NoopMetricsRecorder {
+	return NoopMetricsRecorder{}
+}
+
 type InMemoryMetrics struct {
 	mu             sync.Mutex
 	RequestCount   map[MetricLabels]uint64
