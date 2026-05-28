@@ -26,6 +26,7 @@ const (
 	NameTracing            = "tracing"
 	NameMetrics            = "metrics"
 	NameLogging            = "logging"
+	NameAuthXORGuard       = "auth_xor_guard"
 	NameAuthentication     = "authentication"
 	NameAuthorization      = "authorization"
 	NameRateLimiting       = "rate_limiting"
@@ -39,6 +40,7 @@ var StandardOrder = []string{
 	NameTracing,
 	NameMetrics,
 	NameLogging,
+	NameAuthXORGuard,
 	NameAuthentication,
 	NameAuthorization,
 	NameRateLimiting,
@@ -147,7 +149,9 @@ func (NoopCircuitBreaker) Allow(context.Context, string) error {
 	return nil
 }
 
-func (NoopCircuitBreaker) Record(context.Context, string, error) {}
+func (NoopCircuitBreaker) Record(context.Context, string, error) {
+	// Intentionally a no-op: default breaker tracks no state and never blocks execution.
+}
 
 func HTTPCircuitBreakerMiddleware(cb CircuitBreaker, operation func(r *http.Request) string) func(http.Handler) http.Handler {
 	if cb == nil {

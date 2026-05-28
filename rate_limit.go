@@ -76,32 +76,30 @@ func (l *FixedWindowLimiter) Decide(_ context.Context, key string, now time.Time
 	resetAt := slot.windowStart.Add(l.window)
 
 	if slot.count >= l.limit {
-		retry := int64(resetAt.Sub(now).Seconds())
-		if retry < 1 {
-			retry = 1
-		}
-		return RateLimitDecision{
-			Allowed:     false,
-			Limit:       l.limit,
-			Remaining:   0,
-			ResetAt:     resetAt,
-			RetryAfterS: retry,
-		}, nil
+		return fixedWindowExceeded(l.limit, resetAt, now), nil
 	}
 
 	slot.count++
 	l.slots[key] = slot
-	remaining := l.limit - slot.count
+	return fixedWindowAllowed(l.limit, slot.count, resetAt), nil
+}
+
+// fixedWindowExceeded builds the RateLimitDecision for a rejected request.
+func fixedWindowExceeded(limit int, resetAt time.Time, now time.Time) RateLimitDecision {
+	retry := int64(resetAt.Sub(now).Seconds())
+	if retry < 1 {
+		retry = 1
+	}
+	return RateLimitDecision{Allowed: false, Limit: limit, Remaining: 0, ResetAt: resetAt, RetryAfterS: retry}
+}
+
+// fixedWindowAllowed builds the RateLimitDecision for an accepted request.
+func fixedWindowAllowed(limit, newCount int, resetAt time.Time) RateLimitDecision {
+	remaining := limit - newCount
 	if remaining < 0 {
 		remaining = 0
 	}
-	return RateLimitDecision{
-		Allowed:     true,
-		Limit:       l.limit,
-		Remaining:   remaining,
-		ResetAt:     resetAt,
-		RetryAfterS: 0,
-	}, nil
+	return RateLimitDecision{Allowed: true, Limit: limit, Remaining: remaining, ResetAt: resetAt, RetryAfterS: 0}
 }
 
 type HTTPRateLimitConfig struct {
@@ -118,6 +116,18 @@ type GRPCRateLimitConfig struct {
 
 func HTTPRateLimitMiddleware(cfg HTTPRateLimitConfig) func(http.Handler) http.Handler {
 	cfg = resolveHTTPRateLimitConfig(cfg)
+	return httpRateLimitMiddleware(cfg)
+}
+
+// HTTPRateLimitMiddlewareStrict builds middleware without implicit defaults.
+func HTTPRateLimitMiddlewareStrict(cfg HTTPRateLimitConfig) (func(http.Handler) http.Handler, error) {
+	if err := ValidateHTTPRateLimitConfigStrict(cfg); err != nil {
+		return nil, err
+	}
+	return httpRateLimitMiddleware(cfg), nil
+}
+
+func httpRateLimitMiddleware(cfg HTTPRateLimitConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := cfg.KeyFunc(r)
@@ -141,6 +151,18 @@ func HTTPRateLimitMiddleware(cfg HTTPRateLimitConfig) func(http.Handler) http.Ha
 
 func GRPCRateLimitInterceptor(cfg GRPCRateLimitConfig) grpc.UnaryServerInterceptor {
 	cfg = resolveGRPCRateLimitConfig(cfg)
+	return grpcRateLimitInterceptor(cfg)
+}
+
+// GRPCRateLimitInterceptorStrict builds an interceptor without implicit defaults.
+func GRPCRateLimitInterceptorStrict(cfg GRPCRateLimitConfig) (grpc.UnaryServerInterceptor, error) {
+	if err := ValidateGRPCRateLimitConfigStrict(cfg); err != nil {
+		return nil, err
+	}
+	return grpcRateLimitInterceptor(cfg), nil
+}
+
+func grpcRateLimitInterceptor(cfg GRPCRateLimitConfig) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		key := cfg.KeyFunc(ctx, info.FullMethod)
 		decision, err := cfg.Limiter.Decide(ctx, key, cfg.Now())

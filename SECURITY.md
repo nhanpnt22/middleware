@@ -14,9 +14,17 @@ Include:
 
 ## Security Notes
 
-For production authentication in AIP services, use strict Firebase middleware:
+For production middleware deployments, prefer strict constructors and validators:
 
-- `HTTPFirebaseAuthMiddleware`
-- `GRPCFirebaseAuthInterceptor`
 
-These paths are designed to fail closed and enforce server-side identity/session/provider invariants.
+For domain-specific Firebase + identity/session policy enforcement, use the optional adapter:
+
+- `github.com/nhanpnt22/middleware/aipfirebase`
+
+Strict paths are designed to fail closed and reject incomplete startup configuration.
+
+Configuration and secrets guidance:
+
+- keep secret-bearing values out of config files
+- inject secrets via environment variables or secret manager bindings
+- validate middleware config at startup using strict validation helpers

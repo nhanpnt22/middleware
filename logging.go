@@ -46,6 +46,18 @@ type LoggingConfig struct {
 
 func HTTPLoggingMiddleware(cfg LoggingConfig) func(http.Handler) http.Handler {
 	cfg = resolveLoggingConfig(cfg)
+	return httpLoggingMiddleware(cfg)
+}
+
+// HTTPLoggingMiddlewareStrict builds middleware without implicit defaults.
+func HTTPLoggingMiddlewareStrict(cfg LoggingConfig) (func(http.Handler) http.Handler, error) {
+	if err := ValidateLoggingConfigStrict(cfg); err != nil {
+		return nil, err
+	}
+	return httpLoggingMiddleware(cfg), nil
+}
+
+func httpLoggingMiddleware(cfg LoggingConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := cfg.Now()
@@ -71,6 +83,18 @@ func HTTPLoggingMiddleware(cfg LoggingConfig) func(http.Handler) http.Handler {
 
 func GRPCLoggingInterceptor(cfg LoggingConfig) grpc.UnaryServerInterceptor {
 	cfg = resolveLoggingConfig(cfg)
+	return grpcLoggingInterceptor(cfg)
+}
+
+// GRPCLoggingInterceptorStrict builds an interceptor without implicit defaults.
+func GRPCLoggingInterceptorStrict(cfg LoggingConfig) (grpc.UnaryServerInterceptor, error) {
+	if err := ValidateLoggingConfigStrict(cfg); err != nil {
+		return nil, err
+	}
+	return grpcLoggingInterceptor(cfg), nil
+}
+
+func grpcLoggingInterceptor(cfg LoggingConfig) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		start := cfg.Now()
 		resp, err := handler(ctx, req)

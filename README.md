@@ -1,15 +1,16 @@
 # middleware
 
-Deterministic, reusable Go middleware primitives for AIP services.
+Deterministic, reusable Go middleware primitives for HTTP and gRPC services.
 
-This package includes:
+## Features
 
 - Canonical chain composition
 - Panic recovery
 - Tracing context propagation
 - Metrics and structured logging helpers
 - Authentication and authorization middleware
-- Strict Firebase ID token authentication middleware with AIP invariant hooks
+- Auth xor guard middleware (`authorization` xor `x-api-key`)
+- Pluggable foundation primitives (codec + digest + entropy)
 - Rate limiting
 - Circuit breaker wrappers
 - Idempotency extraction and request validation
@@ -26,27 +27,16 @@ go get github.com/nhanpnt22/middleware
 import "github.com/nhanpnt22/middleware"
 ```
 
-## Strict Firebase Auth
+## Optional Domain Adapter
 
-Use the strict constructors for production AIP auth enforcement:
+Domain-specific Firebase + identity/session binding enforcement is isolated in the optional `aipfirebase` subpackage:
 
-- `HTTPFirebaseAuthMiddleware`
-- `GRPCFirebaseAuthInterceptor`
+- `github.com/nhanpnt22/middleware/aipfirebase`
 
-Both require:
+Compatibility constructors are still available in the root package:
 
-- token verifier
-- project id
-- session validator
-- identity validator
-
-Behavior:
-
-- fail closed
-- enforce issuer/audience/uid/exp
-- enforce required claims and provider allowlist
-- enforce session and identity binding via validators
-- inject verified identity and binding claims into context
+- `HTTPFirebaseAuthMiddlewareStrict`
+- `GRPCFirebaseAuthInterceptorStrict`
 
 ## Standard Chain Order
 
@@ -55,6 +45,7 @@ panic_recovery
 tracing
 metrics
 logging
+auth_xor_guard
 authentication
 authorization
 rate_limiting
@@ -65,3 +56,92 @@ handler
 ```
 
 Use `ValidateStandardOrder` to enforce order in tests/CI.
+
+## Strict Mode
+
+This package does not read environment variables or config files directly.
+All configuration must be injected by the caller at startup.
+
+For fail-fast startup validation (no implicit defaults), use strict validators:
+
+- `ValidateEnvironmentConfigStrict`
+- `ValidateHTTPAuthConfigStrict`
+- `ValidateGRPCAuthConfigStrict`
+- `ValidateHTTPAuthXORConfigStrict`
+- `ValidateGRPCAuthXORConfigStrict`
+- `ValidateFirebaseAuthMiddlewareConfigStrict`
+- `ValidateLoggingConfigStrict`
+- `ValidateMetricsConfigStrict`
+- `ValidateTracingConfigStrict`
+- `ValidateHTTPValidationConfigStrict`
+- `ValidateGRPCValidationConfigStrict`
+- `ValidateHTTPRateLimitConfigStrict`
+- `ValidateGRPCRateLimitConfigStrict`
+- `ValidateFoundationConfigStrict`
+
+For explicit wiring constructors, use strict constructors:
+
+- `HTTPAuthenticationMiddlewareStrict`
+- `GRPCAuthenticationInterceptorStrict`
+- `HTTPAuthXORGuardMiddlewareStrict`
+- `GRPCAuthXORGuardInterceptorStrict`
+- `HTTPFirebaseAuthMiddlewareStrict`
+- `GRPCFirebaseAuthInterceptorStrict`
+- `HTTPTracingMiddlewareStrict`
+- `GRPCTracingInterceptorStrict`
+- `HTTPMetricsMiddlewareStrict`
+- `GRPCMetricsInterceptorStrict`
+- `HTTPLoggingMiddlewareStrict`
+- `GRPCLoggingInterceptorStrict`
+- `HTTPRateLimitMiddlewareStrict`
+- `GRPCRateLimitInterceptorStrict`
+- `HTTPIdempotencyExtractionMiddlewareStrict`
+- `GRPCIdempotencyExtractionInterceptorStrict`
+- `HTTPValidationMiddlewareStrict`
+- `GRPCValidationInterceptorStrict`
+
+## Foundation Primitives
+
+For reusable ID/hash/token generation across middleware and services, use `Foundation`.
+
+Default constructor (safe baseline):
+
+- `NewFoundation()` uses SHA-256 + Base64URL + `crypto/rand`
+
+Strict constructor (no implicit defaults):
+
+- `NewFoundationStrict(FoundationConfig)`
+
+Pluggable interfaces:
+
+- `BinaryTextCodec` (e.g. Base64URL, Base32, B57/F57 adapters)
+- `DigestProvider` (e.g. SHA-256, BLAKE3 adapters)
+- `FuncBinaryTextCodec` and `FuncDigestProvider` for function-based integration
+
+Core operations:
+
+- `NewToken()` for random transport-safe token generation
+- `ContentHash(input)` for canonical digest representation
+- `DeterministicID(namespace, payload, digestBytes)` for stable namespaced IDs
+
+## Configurable Validation Headers
+
+Validation middleware supports explicit header configuration:
+
+- HTTP: `RequestIDHeader`, `IdempotencyHeader`, `AppIDHeader`, `SessionHeader`
+- gRPC: `RequestIDHeader`, `IdempotencyHeader`, `AltIdempotencyHeader`, `AppIDHeader`, `SessionHeader`
+
+This allows integration with non-default ingress and metadata conventions.
+
+## Examples
+
+See minimal examples:
+
+- `examples/http/main.go`
+- `examples/grpc/main.go`
+- `examples/foundation/main.go`
+
+## Security Notes
+
+- Do not store secret values in configuration files.
+- Inject secret-bearing values through environment variables or a secret manager.

@@ -65,6 +65,18 @@ type MetricsConfig struct {
 
 func HTTPMetricsMiddleware(cfg MetricsConfig) func(http.Handler) http.Handler {
 	cfg = resolveMetricsConfig(cfg)
+	return httpMetricsMiddleware(cfg)
+}
+
+// HTTPMetricsMiddlewareStrict builds middleware without implicit defaults.
+func HTTPMetricsMiddlewareStrict(cfg MetricsConfig) (func(http.Handler) http.Handler, error) {
+	if err := ValidateMetricsConfigStrict(cfg); err != nil {
+		return nil, err
+	}
+	return httpMetricsMiddleware(cfg), nil
+}
+
+func httpMetricsMiddleware(cfg MetricsConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := cfg.Now()
@@ -88,6 +100,18 @@ func HTTPMetricsMiddleware(cfg MetricsConfig) func(http.Handler) http.Handler {
 
 func GRPCMetricsInterceptor(cfg MetricsConfig) grpc.UnaryServerInterceptor {
 	cfg = resolveMetricsConfig(cfg)
+	return grpcMetricsInterceptor(cfg)
+}
+
+// GRPCMetricsInterceptorStrict builds an interceptor without implicit defaults.
+func GRPCMetricsInterceptorStrict(cfg MetricsConfig) (grpc.UnaryServerInterceptor, error) {
+	if err := ValidateMetricsConfigStrict(cfg); err != nil {
+		return nil, err
+	}
+	return grpcMetricsInterceptor(cfg), nil
+}
+
+func grpcMetricsInterceptor(cfg MetricsConfig) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		start := cfg.Now()
 		resp, err := handler(ctx, req)
