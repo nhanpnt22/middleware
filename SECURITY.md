@@ -7,15 +7,20 @@ or contact the maintainer directly using the repository owner contact.
 
 Include:
 
-- clear impact description
-- reproduction steps
-- affected versions
-- mitigation suggestions
+- Clear impact description
+- Reproduction steps
+- Affected versions
+- Mitigation suggestions
 
 ## Security Notes
 
 For production middleware deployments, prefer strict constructors and validators:
 
+- `ValidateEnvironmentConfigStrict`
+- `ValidateHTTPAuthConfigStrict` / `ValidateGRPCAuthConfigStrict`
+- `ValidateHTTPValidationConfigStrict` / `ValidateGRPCValidationConfigStrict`
+- `ValidateHTTPRateLimitConfigStrict` / `ValidateGRPCRateLimitConfigStrict`
+- `ValidateLoggingConfigStrict` / `ValidateMetricsConfigStrict` / `ValidateTracingConfigStrict`
 
 For domain-specific Firebase + identity/session policy enforcement, use the optional adapter:
 
@@ -25,6 +30,6 @@ Strict paths are designed to fail closed and reject incomplete startup configura
 
 Configuration and secrets guidance:
 
-- keep secret-bearing values out of config files
-- inject secrets via environment variables or secret manager bindings
-- validate middleware config at startup using strict validation helpers
+- Keep secret-bearing values out of config files
+- Inject secrets via environment variables or secret manager bindings
+- Validate middleware config at startup using strict validation helpers

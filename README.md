@@ -165,6 +165,22 @@ Core operations:
 - `ContentHash(input)` for canonical digest representation
 - `DeterministicID(namespace, payload, digestBytes)` for stable namespaced IDs
 
+### F57 Family Compatibility Status
+
+Direct middleware dependency on ID57/H57/R57/B57/S57 is intentionally deferred.
+
+Current policy:
+
+- Keep middleware transport/runtime surfaces dependency-clean.
+- Use the `Foundation` interfaces for pluggable codec and digest integration.
+- Add direct f57-family dependency only after upstream packaging and licensing are consumable.
+
+Enablement criteria for future direct adoption:
+
+- A publicly resolvable Go module path for the Go implementation.
+- License terms that explicitly permit usage, modification, and redistribution for this project.
+- Stable tagged releases with import instructions that work with standard Go tooling.
+
 ## Configurable Validation Headers
 
 Validation middleware supports explicit header configuration:
@@ -192,4 +208,4 @@ See minimal examples:
 - Run `go test ./...`
 - Verify strict constructors for startup wiring return no errors in your service bootstrap
 - Confirm middleware order with `ValidateStandardOrder` in CI/tests
-- Tag releases with semantic versioning (for example `v0.1.1`)
+- Tag releases with semantic versioning (for example `vX.Y.Z`)
